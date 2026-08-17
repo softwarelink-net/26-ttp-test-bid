@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://26-ttp-test-bid.softwarelink.net/sitemap.xml
