@@ -14,6 +14,7 @@
     "db:seed:remote": "wrangler d1 execute Allworld --remote --file=./schema.sql",
     "deploy": "npm run build && wrangler deploy && node scripts/deploy-allworld.mjs 26-ttp-test-bid",
     "deploy:r2": "node scripts/deploy-allworld.mjs 26-ttp-test-bid",
+    "deploy:worker": "npm run build && wrangler deploy",
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
