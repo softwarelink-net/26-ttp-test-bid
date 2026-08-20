@@ -1,6 +1,7 @@
 /**
- * Cloudflare Worker — 26-ttp-test-bid
- * 独立主机：ASSETS SPA + /api/* + R2 双写备份
+ * Cloudflare Worker — allworld
+ * 多站点 R2 静态托管 + 26-ttp-test-bid (D1/R2/ASSETS) 主机分流
+ * 非本项目主机仅走 allworld-sites R2，不抢占其他独立 Worker 站点
  */
 import { handleApi } from '../functions/[[path]].js'
 
@@ -30,6 +31,24 @@ function json(data: unknown, status = 200): Response {
   })
 }
 
+function siteIdFromHost(hostname: string, rootDomain: string): string {
+  const host = hostname.toLowerCase()
+  const root = rootDomain.toLowerCase()
+  if (host === root) return '_root'
+  if (host === `www.${root}`) return 'www'
+  if (host.endsWith(`.${root}`)) return host.slice(0, -(root.length + 1))
+  return host
+}
+
+function isProjectHost(hostname: string, env: Env): boolean {
+  const host = hostname.toLowerCase()
+  const root = (env.ROOT_DOMAIN || 'softwarelink.net').toLowerCase()
+  const slug = (env.PROJECT_SLUG || '26-ttp-test-bid').toLowerCase()
+  if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.localhost')) return true
+  if (host.endsWith('.workers.dev')) return true
+  return host === `${slug}.${root}` || host.startsWith(`${slug}.`)
+}
+
 function contentTypeFor(path: string): string {
   const ext = path.split('.').pop()?.toLowerCase() || ''
   const map: Record<string, string> = {
@@ -50,6 +69,109 @@ function contentTypeFor(path: string): string {
     woff2: 'font/woff2',
   }
   return map[ext] || 'application/octet-stream'
+}
+
+function emptySitePage(siteId: string): Response {
+  if (siteId === '_root' || siteId === 'www') {
+    const html = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>allworld · softwarelink.net</title>
+  <style>
+    :root { --ink:#0f172a; --muted:#64748b; --bg:#f8fafc; }
+    body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; color:var(--ink);
+      background: radial-gradient(1000px 500px at 0% 0%,#e0f2fe,transparent 55%),
+                  radial-gradient(800px 400px at 100% 0%,#fef3c7,transparent 50%), var(--bg);
+      min-height:100vh; }
+    main { max-width:42rem; margin:0 auto; padding:4rem 1.25rem; }
+    h1 { font-size:clamp(2rem,5vw,3rem); letter-spacing:-0.04em; margin:0 0 .75rem; }
+    p,li { color:var(--muted); line-height:1.7; }
+    code { background:#e2e8f0; padding:.15em .4em; border-radius:4px; font-size:.92em; }
+    a { color:#0284c7; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>allworld</h1>
+    <p>softwarelink.net 多站点边缘托管入口（Worker <code>allworld</code> + R2 <code>allworld-sites</code>）。</p>
+    <ul>
+      <li>子域站点：<code>{site}.softwarelink.net</code> → R2 前缀 <code>{site}/</code></li>
+      <li>TTP 测试平台：<a href="https://26-ttp-test-bid.softwarelink.net/">26-ttp-test-bid.softwarelink.net</a></li>
+    </ul>
+  </main>
+</body>
+</html>`
+    return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${siteId}</title>
+  <style>
+    body { margin:0; font-family:system-ui,sans-serif; background:#f8fafc; color:#0f172a;
+      min-height:100vh; display:grid; place-items:center; }
+    main { max-width:36rem; padding:2rem; }
+    h1 { margin:0 0 .5rem; letter-spacing:-0.03em; }
+    p { color:#64748b; line-height:1.6; }
+    code { background:#e2e8f0; padding:.1em .35em; border-radius:4px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>${siteId}</h1>
+    <p>R2 尚无静态文件。上传静态产物或访问项目专属子域。</p>
+  </main>
+</body>
+</html>`
+  return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+}
+
+async function serveR2Site(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url)
+  const siteId = siteIdFromHost(url.hostname, env.ROOT_DOMAIN || 'softwarelink.net')
+
+  if (url.pathname === '/api/data/demo' && request.method === 'PUT') {
+    return json({ ok: true, site: siteId, message: 'demo accepted' })
+  }
+  if (url.pathname.startsWith('/api/')) {
+    return json({ ok: false, error: 'Not Found' }, 404)
+  }
+
+  let pathname = decodeURIComponent(url.pathname)
+  if (pathname.endsWith('/')) pathname += 'index.html'
+  if (pathname === '') pathname = '/index.html'
+
+  const candidates = [
+    `${siteId}${pathname}`,
+    `${siteId}${pathname}.html`,
+    `${siteId}${pathname}/index.html`,
+    `${siteId}/index.html`,
+  ]
+
+  for (const key of candidates) {
+    const obj = await env.SITES.get(key)
+    if (!obj) continue
+    const headers = new Headers()
+    headers.set('Content-Type', obj.httpMetadata?.contentType || contentTypeFor(key))
+    if (obj.httpEtag) headers.set('ETag', obj.httpEtag)
+    return new Response(obj.body, { headers })
+  }
+
+  if (!pathname.split('/').pop()?.includes('.')) {
+    const indexObj = await env.SITES.get(`${siteId}/index.html`)
+    if (indexObj) {
+      return new Response(indexObj.body, {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      })
+    }
+  }
+
+  return emptySitePage(siteId)
 }
 
 async function serveProjectStorage(request: Request, env: Env): Promise<Response | null> {
@@ -77,21 +199,28 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
 
-    if (url.pathname.startsWith('/api/')) {
-      try {
-        return await handleApi(request, env)
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Internal error'
-        return json({ ok: false, error: message }, 500)
+    if (isProjectHost(url.hostname, env)) {
+      if (url.pathname.startsWith('/api/')) {
+        try {
+          return await handleApi(request, env)
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Internal error'
+          return json({ ok: false, error: message }, 500)
+        }
       }
+      if (env.ASSETS) {
+        return env.ASSETS.fetch(request)
+      }
+      const fromR2 = await serveProjectStorage(request, env)
+      if (fromR2) return fromR2
+      return new Response('ASSETS binding not configured', { status: 500 })
     }
 
-    if (env.ASSETS) {
-      return env.ASSETS.fetch(request)
+    try {
+      return await serveR2Site(request, env)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Internal error'
+      return json({ ok: false, error: message }, 500)
     }
-
-    const fromR2 = await serveProjectStorage(request, env)
-    if (fromR2) return fromR2
-    return new Response('ASSETS binding not configured', { status: 500 })
   },
 }

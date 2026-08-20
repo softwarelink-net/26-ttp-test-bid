@@ -1,16 +1,29 @@
-name = "26-ttp-test-bid"
+name = "allworld"
 main = "worker/index.ts"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
-# 使用比 allworld 通配符更具体的 zone route，确保本站流量命中独立 Worker
+# 共享 allworld：通配子域 R2 多站点；本项目主机走 ASSETS + /api
 [[routes]]
-pattern = "26-ttp-test-bid.softwarelink.net/*"
+pattern = "*.softwarelink.net/*"
 zone_name = "softwarelink.net"
 
 [[routes]]
 pattern = "26-ttp-test-bid.softwarelink.net"
+custom_domain = true
+
+# 保留已有 allworld 自定义域，避免覆盖部署时摘掉其他站点域名
+[[routes]]
+pattern = "26-sf-dams-bid.softwarelink.net"
+custom_domain = true
+
+[[routes]]
+pattern = "softwarelink.net"
+custom_domain = true
+
+[[routes]]
+pattern = "www.softwarelink.net"
 custom_domain = true
 
 [assets]

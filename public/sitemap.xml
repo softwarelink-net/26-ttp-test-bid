@@ -2,8 +2,10 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
-        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
-  <!-- 首页 / 招标公告落地页 -->
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+          http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd
+          http://www.google.com/schemas/sitemap-image/1.1
+          http://www.google.com/schemas/sitemap-image/1.1/sitemap-image.xsd">
   <url>
     <loc>https://26-ttp-test-bid.softwarelink.net/</loc>
     <lastmod>2026-08-20</lastmod>
@@ -12,56 +14,43 @@
     <image:image>
       <image:loc>https://26-ttp-test-bid.softwarelink.net/favicon.svg</image:loc>
       <image:title>基于GCU、BPCU设备的TTP需求测试验证平台</image:title>
-      <image:caption>陕西航空电气有限责任公司 TTP 双余度总线测试验证平台招标演示</image:caption>
+      <image:caption>陕西航空电气有限责任公司 GCU/BPCU TTP 需求测试验证平台招标公告</image:caption>
     </image:image>
   </url>
-  <!-- 招标公告全文（公开） -->
   <url>
     <loc>https://26-ttp-test-bid.softwarelink.net/bid-notice</loc>
     <lastmod>2026-08-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
   </url>
-  <!-- 身份鉴别 / 登录 -->
   <url>
     <loc>https://26-ttp-test-bid.softwarelink.net/login</loc>
     <lastmod>2026-08-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
-  <!-- TTP 总线监视控制台 -->
   <url>
     <loc>https://26-ttp-test-bid.softwarelink.net/dashboard</loc>
     <lastmod>2026-08-20</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
-  <!-- 九项招标测试套件 -->
   <url>
     <loc>https://26-ttp-test-bid.softwarelink.net/tests</loc>
     <lastmod>2026-08-20</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.88</priority>
   </url>
-  <!-- 硬件故障注入沙箱 -->
   <url>
     <loc>https://26-ttp-test-bid.softwarelink.net/fault-injection</loc>
     <lastmod>2026-08-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.82</priority>
   </url>
-  <!-- 系统配置 / RBAC -->
   <url>
     <loc>https://26-ttp-test-bid.softwarelink.net/admin/settings</loc>
     <lastmod>2026-08-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.55</priority>
-  </url>
-  <!-- 403 权限拦截页（低优先级，便于完整性） -->
-  <url>
-    <loc>https://26-ttp-test-bid.softwarelink.net/403</loc>
-    <lastmod>2026-08-20</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.1</priority>
   </url>
 </urlset>
